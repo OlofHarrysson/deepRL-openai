@@ -5,28 +5,46 @@ import random
 from noise import OrnsteinUhlenbeckActionNoise
 
 class Actor():
-  def __init__(self, sess, state_dim, action_dim, action_bound, lr=0.0001):
+  def __init__(self, sess, state_dim, action_dim, action_bound, batch_size, lr=0.0001,
+               tau=0.001):
     self.sess = sess
     self.state_dim = state_dim
     self.action_dim = action_dim
     self.action_bound = action_bound
-    self.tau = 0.001 # TODO
-    self.noise_gen = OrnsteinUhlenbeckActionNoise(mu = np.zeros(action_dim)) # TODO
+    self.batch_size = batch_size
+    self.tau = tau
+    self.noise_gen = OrnsteinUhlenbeckActionNoise(mu = np.zeros(action_dim))
 
     self.input, self.output, self.weights = self._build_net('actor_net')
     self.target_input, self.target_output, self.target_weights = self._build_net('target_actor_net')
 
     with tf.variable_scope('actor'):
-      self.actor_gradients = tf.placeholder(tf.float32, [None, action_dim])
-      unnormalized_actor_gradients = tf.gradients(self.output, self.weights,
-                                                       -self.actor_gradients)
-
-      grads = list(map(lambda x: tf.divide(x, 64) if x != None else x,
-                                      unnormalized_actor_gradients)) # TODO: batchsize and remove check for None?
+      with tf.variable_scope('gradients'):
+        self.gradients = tf.placeholder(tf.float32, [None, action_dim], name='input')
+        unnormalized_gradients = tf.gradients(self.output, self.weights, -self.gradients)
+        
+        gradients = list(map(lambda x: tf.divide(x, self.batch_size),
+                             unnormalized_gradients))
       
-      self.optimizer = tf.train.AdamOptimizer(lr).apply_gradients(zip(grads, self.weights))
+      self.optimizer = tf.train.AdamOptimizer(lr).apply_gradients(zip(gradients, self.weights))
 
-      self.update_target = [self.target_weights[i].assign(tf.multiply(self.weights[i], self.tau) + tf.multiply(self.target_weights[i], 1. - self.tau)) for i in range(len(self.target_weights))]
+      # target_weights = tau * weights + (1-tau) * target_weights
+      update = lambda w, t_w: t_w.assign(tf.scalar_mul(self.tau, w) + tf.scalar_mul(1. - self.tau, t_w))
+
+      self.update_target = list(map(update, self.weights, self.target_weights))
+
+
+  def _build_net(self, scope):
+    with tf.variable_scope(scope):
+      with tf.variable_scope('input'):
+        state = tf.placeholder(tf.float32, [None, self.state_dim])
+
+      l1 = tf.layers.dense(state, units=400, activation=tf.nn.relu)
+      l2 = tf.layers.dense(l1, units=300, activation=tf.nn.relu)
+      l3 = tf.layers.dense(l2, units=self.action_dim, activation=tf.nn.tanh)
+      output = tf.multiply(self.action_bound, l3, name='output')
+
+      return state, output, tf.trainable_variables(scope)
 
 
   def predict(self, state):
@@ -44,33 +62,20 @@ class Actor():
   def train(self, state, actor_gradients):
     self.sess.run(self.optimizer, {
         self.input: state,
-        self.actor_gradients: actor_gradients[0]}) # TODO
+        self.gradients: actor_gradients})
 
 
   def train_target(self):
     self.sess.run(self.update_target)
 
 
-  def _build_net(self, scope):
-    with tf.variable_scope(scope):
-      with tf.variable_scope('input'):
-        state = tf.placeholder(tf.float32, [None, self.state_dim])
-
-      l1 = tf.layers.dense(state, units=400, activation=tf.nn.relu)
-      l2 = tf.layers.dense(l1, units=300, activation=tf.nn.relu)
-      l3 = tf.layers.dense(l2, units=self.action_dim, activation=tf.nn.tanh)
-      output = tf.multiply(self.action_bound, l3, name='output')
-
-      return state, output, tf.trainable_variables(scope)
-
-
 class Critic():
-  def __init__(self, sess, state_dim, action_dim, lr=0.001):
+  def __init__(self, sess, state_dim, action_dim, lr=0.001, tau=0.001):
     self.sess = sess
     self.state_dim = state_dim
     self.action_dim = action_dim
 
-    self.tau = 0.001 # TODO
+    self.tau = tau
 
     self.state_input, self.action_input, self.output, self.weights = self._build_net('critic_net')
     self.target_state_input, self.target_action_input, self.target_output, self.target_weights = self._build_net('target_critic_net')
@@ -82,7 +87,10 @@ class Critic():
 
       self.actor_gradients = tf.gradients(self.output, self.action_input)
 
-      self.update_target = [self.target_weights[i].assign(tf.multiply(self.weights[i], self.tau) + tf.multiply(self.target_weights[i], 1. - self.tau)) for i in range(len(self.target_weights))]
+      # target_weights = tau * weights + (1-tau) * target_weights
+      update = lambda w, t_w: t_w.assign(tf.scalar_mul(self.tau, w) + tf.scalar_mul(1. - self.tau, t_w))
+
+      self.update_target = list(map(update, self.weights, self.target_weights))
 
   
   def _build_net(self, scope):
@@ -123,30 +131,30 @@ class Critic():
                   self.q_val: q_val})
 
 
-  def actor_gradients2(self, state, action):
+  def train_target(self):
+    self.sess.run(self.update_target)
+
+
+  def calc_actor_gradients(self, state, action):
     return self.sess.run(self.actor_gradients, {
                          self.state_input: state,
                          self.action_input: action})
 
 
-  def train_target(self):
-    self.sess.run(self.update_target)
-
-
 class DDPG_agent():
-  def __init__(self, state_dim, action_dim):
+  def __init__(self, state_dim, action_dim, action_bound, gamma = 0.9):
+    # TODO: Save, load model
     self.sess = tf.Session()
     self.state_dim = state_dim
     self.action_dim = action_dim
-
-    self.action_bound = 2.0 # TODO
-    self.gamma = 0.9 # TODO
-
-    self.actor = Actor(self.sess, state_dim, action_dim, self.action_bound)
-    self.critic = Critic(self.sess, state_dim, action_dim)
-
     self.memory = deque(maxlen=5000)
     self.batch_size = 64
+
+    self.action_bound = action_bound
+    self.gamma = gamma
+
+    self.actor = Actor(self.sess, state_dim, action_dim, self.action_bound, self.batch_size)
+    self.critic = Critic(self.sess, state_dim, action_dim)
 
     self.sess.run(tf.global_variables_initializer())
 
@@ -176,8 +184,8 @@ class DDPG_agent():
       self.critic.train(state, action, q_val)
 
       # Update actor
-      actor_gradients = self.critic.actor_gradients2(state, action) # TODO
-      self.actor.train(state, actor_gradients)
+      actor_gradients = self.critic.calc_actor_gradients(state, action)
+      self.actor.train(state, actor_gradients[0])
 
       # Update target networks
       self.actor.train_target()

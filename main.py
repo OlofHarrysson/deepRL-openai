@@ -26,17 +26,19 @@ def parse():
 def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
          save = 'overwritable', load_path = None):
 
-  from deep_q_agent import DQAgent
-  env = gym.make('CartPole-v1')
-  state_size = env.observation_space.shape[0]
-  action_size = env.action_space.n
-  agent = DQAgent(state_size, action_size)
+  # from deep_q_agent import DQAgent
+  # env = gym.make('CartPole-v1')
+  # state_dim = env.observation_space.shape[0]
+  # action_dim = env.action_space.n
+  # agent = DQAgent(state_dim, action_dim)
 
-  # from ddpg import DDPG_agent
-  # env = gym.make('Pendulum-v0')
-  # state_size = env.observation_space.shape[0]
-  # action_size = env.action_space.shape[0]
-  # agent = DDPG_agent(state_size, action_size)
+  from ddpg import DDPG_agent
+  env = gym.make('Pendulum-v0')
+  # env = gym.make('LunarLanderContinuous-v2')
+  state_dim = env.observation_space.shape[0]
+  action_dim = env.action_space.shape[0]
+  action_bound = env.action_space.high
+  agent = DDPG_agent(state_dim, action_dim, action_bound)
 
   if load_path:
     agent.load(load_path)
