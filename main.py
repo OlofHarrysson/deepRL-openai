@@ -32,13 +32,17 @@ def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
   # action_dim = env.action_space.n
   # agent = DQAgent(state_dim, action_dim)
 
+  # env = gym.make('LunarLanderContinuous-v2')
+  
   from ddpg import DDPG_agent
   env = gym.make('Pendulum-v0')
-  # env = gym.make('LunarLanderContinuous-v2')
   state_dim = env.observation_space.shape[0]
   action_dim = env.action_space.shape[0]
   action_bound = env.action_space.high
   agent = DDPG_agent(state_dim, action_dim, action_bound)
+
+  # env = gym.wrappers.Monitor(env, './saves', video_callable=lambda episode_id: episode_id%10==0) # TODO
+  env = gym.wrappers.Monitor(env, './saves', force=True) # TODO
 
   if load_path:
     agent.load(load_path)
@@ -49,6 +53,7 @@ def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
     score = trainer.run_episode(n_episode, render=n_episode % render_freq == 0) # TODO: How to turn of rendering?
     print("Episode: {}/{}     Score: {:.2f}".format(n_episode, nbr_episodes, score))
 
+  env.close()
   agent.save(save)
 
 
