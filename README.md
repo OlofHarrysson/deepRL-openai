@@ -1,0 +1,1 @@
+<img src="./gifs/swingup.gif" alt="alt text" width="250" height="250">

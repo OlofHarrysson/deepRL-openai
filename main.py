@@ -33,7 +33,7 @@ def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
   # agent = DQAgent(state_dim, action_dim)
 
   # env = gym.make('LunarLanderContinuous-v2')
-  
+
   from ddpg import DDPG_agent
   env = gym.make('Pendulum-v0')
   state_dim = env.observation_space.shape[0]
@@ -42,7 +42,7 @@ def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
   agent = DDPG_agent(state_dim, action_dim, action_bound)
 
   # env = gym.wrappers.Monitor(env, './saves', video_callable=lambda episode_id: episode_id%10==0) # TODO
-  env = gym.wrappers.Monitor(env, './saves', force=True) # TODO
+  env = gym.wrappers.Monitor(env, './saves/last_run', force=True) # TODO
 
   if load_path:
     agent.load(load_path)
