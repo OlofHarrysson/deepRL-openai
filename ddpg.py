@@ -5,22 +5,23 @@ import random
 from noise import OrnsteinUhlenbeckActionNoise
 
 class Actor():
-  def __init__(self, sess, state_dim, action_dim, action_bound, batch_size, lr=0.0001,
-               tau=0.001):
+  def __init__(self, sess, env_helper, batch_size, lr=0.0001, tau=0.001):
     self.sess = sess
-    self.state_dim = state_dim
-    self.action_dim = action_dim
-    self.action_bound = action_bound
+    self.state_dim = env_helper.get_state_dim()
+    self.action_dim = env_helper.get_action_dim()
+    self.action_bound = env_helper.get_action_bound()
+    self.env_helper = env_helper
+
     self.batch_size = batch_size
     self.tau = tau
-    self.noise_gen = OrnsteinUhlenbeckActionNoise(mu = np.zeros(action_dim))
+    self.noise_gen = OrnsteinUhlenbeckActionNoise(mu = np.zeros(self.action_dim))
 
     self.input, self.output, self.weights = self._build_net('actor_net')
     self.target_input, self.target_output, self.target_weights = self._build_net('target_actor_net')
 
     with tf.variable_scope('actor'):
       with tf.variable_scope('gradients'):
-        self.gradients = tf.placeholder(tf.float32, [None, action_dim], name='input')
+        self.gradients = tf.placeholder(tf.float32, [None, self.action_dim], name='input')
         unnormalized_gradients = tf.gradients(self.output, self.weights, -self.gradients)
         
         gradients = list(map(lambda x: tf.divide(x, self.batch_size),
@@ -56,7 +57,8 @@ class Actor():
 
 
   def act(self, state):
-    return self.predict(state) + self.noise_gen()
+    action = self.predict(state) + self.noise_gen()
+    return np.clip(action, -self.action_bound, self.action_bound)
 
 
   def train(self, state, actor_gradients):
@@ -70,10 +72,10 @@ class Actor():
 
 
 class Critic():
-  def __init__(self, sess, state_dim, action_dim, lr=0.001, tau=0.001):
+  def __init__(self, sess, env_helper, lr=0.001, tau=0.001):
     self.sess = sess
-    self.state_dim = state_dim
-    self.action_dim = action_dim
+    self.state_dim = env_helper.get_state_dim()
+    self.action_dim = env_helper.get_action_dim()
 
     self.tau = tau
 
@@ -142,19 +144,17 @@ class Critic():
 
 
 class DDPG_agent():
-  def __init__(self, state_dim, action_dim, action_bound, gamma = 0.9):
+  def __init__(self, env_helper, gamma = 0.99):
     # TODO: Save, load model
     self.sess = tf.Session()
-    self.state_dim = state_dim
-    self.action_dim = action_dim
+    self.state_dim = env_helper.get_state_dim() # TODO:
     self.memory = deque(maxlen=5000)
     self.batch_size = 64
 
-    self.action_bound = action_bound
     self.gamma = gamma
 
-    self.actor = Actor(self.sess, state_dim, action_dim, self.action_bound, self.batch_size)
-    self.critic = Critic(self.sess, state_dim, action_dim)
+    self.actor = Actor(self.sess, env_helper, self.batch_size)
+    self.critic = Critic(self.sess, env_helper)
 
     self.sess.run(tf.global_variables_initializer())
 
@@ -163,15 +163,16 @@ class DDPG_agent():
     return self.state_dim
 
 
-  def add_memory(self, state, action, reward, next_state, done):
-    self.memory.append((state, action, reward, next_state, done))
-
-
   def act(self, state, training=False):
     return self.actor.act(state) if training else self.actor.predict(state)
 
 
-  def replay_memory(self):
+  def train(self, state, action, reward, next_state, done):
+    self.memory.append((state, action, reward, next_state, done))
+    self._replay_memory()
+
+
+  def _replay_memory(self):
     if len(self.memory) > self.batch_size:
       minibatch = random.sample(self.memory, self.batch_size)
       to_np_array = lambda x: np.reshape(list(x), (len(minibatch),-1))

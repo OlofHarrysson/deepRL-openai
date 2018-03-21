@@ -8,12 +8,12 @@ from datetime import datetime
 import pathlib
 
 class DQAgent:
-  def __init__(self, state_dim, action_dim, learning_rate=0.001,
+  def __init__(self, env_helper, learning_rate=0.001,
                batch_size=64, gamma=0.95,
                epsilon=1.0, epsilon_min=0.01, epsilon_decay = 0.99):
 
-    self.state_dim = state_dim
-    self.action_dim = action_dim
+    self.state_dim = env_helper.get_state_dim()
+    self.action_dim = env_helper.get_action_dim()
     self.learning_rate = learning_rate
 
     self.batch_size = batch_size
@@ -40,18 +40,19 @@ class DQAgent:
     return model
 
 
-  def add_memory(self, state, action, reward, next_state, done):
-    self.memory.append((state, action, reward, next_state, done))
-
-
   def act(self, state, training=False):
     if np.random.rand() <= self.epsilon and training:
-      return np.random.randint(self.action_dim)
+      return [np.random.randint(self.action_dim)]
     action_values = self.model.predict(state)[0]
-    return np.argmax(action_values)
+    return [np.argmax(action_values)]
 
 
-  def replay_memory(self):
+  def train(self, state, action, reward, next_state, done):
+    self.memory.append((state, action, reward, next_state, done))
+    self._replay_memory()
+
+
+  def _replay_memory(self):
     if len(self.memory) > self.batch_size:
       minibatch = random.sample(self.memory, self.batch_size)
 
@@ -62,7 +63,6 @@ class DQAgent:
       target = target.astype(np.float32)
 
       target_f = self.model.predict(state)
-
 
       mask = np.zeros((self.batch_size, self.action_dim))
       mask[np.arange(self.batch_size), action.flatten()] = 1

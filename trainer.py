@@ -6,6 +6,7 @@ class Trainer():
     self.agent = agent
     self.episode_length = episode_length
 
+
   def run_episode(self, episode_numer, render):
     state = self.env.reset()
     state = np.reshape(state, [1, self.agent.get_state_dim()])
@@ -13,12 +14,10 @@ class Trainer():
     score = 0
     for t in range(self.episode_length):
       action = self.agent.act(state, training=True)
-      next_state, reward, done = self.take_step(action)
-      score += reward
+      next_state, reward, done = self.take_step(action[0])
+      score += reward[0]
 
-      action = np.reshape(action, [1, 1])
-      self.agent.add_memory(state, action, reward, next_state, done)
-      self.agent.replay_memory()
+      self.agent.train(state, action, reward, next_state, done)
       state = next_state
 
       if render:
@@ -27,7 +26,7 @@ class Trainer():
       if done:
         break
 
-    return score[0]
+    return score
 
 
   def take_step(self, action):
