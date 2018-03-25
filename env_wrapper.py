@@ -4,15 +4,15 @@ def pick_env(env):
   picker = {
     'LunarLanderContinuous': LunarLanderContinuous,
     'PendulumEnv': Pendulum,
-    'CartPoleEnv': Cartpole
+    'CartPoleEnv': Cartpole,
+    'LunarLander': LunarLander
   }
   # hej = switcher.get(argument, "nothing") # TODO: Bad errors
 
-  # print(env.env.__class__.__name__) # Use this printout to add another env
   env_info = picker.get(env.env.__class__.__name__)
   return env_info(env)
 
-'''                 asdasdasd                           '''
+
 # ~~~~~~~~~~~~~~  Superclass ~~~~~~~~~~~~~~
 class Env_helper():
   def __init__(self, env):
@@ -64,6 +64,12 @@ class Pendulum(Continious_actionspace):
 
 
 class Cartpole(Discrete_actionspace):
+  def __init__(self, env):
+    super().__init__(env)
+    self.state_dim = env.observation_space.shape[0]
+    self.action_dim = env.action_space.n
+
+class LunarLander(Discrete_actionspace):
   def __init__(self, env):
     super().__init__(env)
     self.state_dim = env.observation_space.shape[0]

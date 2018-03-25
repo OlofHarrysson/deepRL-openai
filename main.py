@@ -32,31 +32,34 @@ def parse():
 
 
 def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
-         save = 'overwritable', load_path = None, record = False):
+         save = 'overwritable', load_path = None, record = False,
+         agent_type = 'deep_q', env_type = 'CartPole-v1'):
 
   # env = gym.make('CartPole-v1')
-  # agent = agent_creator('deep_q', env)
-
-  env = gym.make('LunarLanderContinuous-v2')
+  # env = gym.make('LunarLander-v2')
+  # env = gym.make('LunarLanderContinuous-v2')
   # env = gym.make('Pendulum-v0')
 
-  agent = agent_creator('ddpg', env)
+  env = gym.make(env_type)
+  agent = agent_creator(agent_type, env)
 
+  # Record videos & more
   if record:
     env = gym.wrappers.Monitor(env, './saves/last_run', force=True)
 
-  if load_path:
+  # Load pre-trained agent
+  if load_path: # TODO: loading-mode that doesn't update network
     agent.load(load_path)
 
-  trainer = Trainer(env, agent, episode_length)
+  # Train agent
+  trainer = Trainer(env, agent, nbr_episodes, episode_length, render_freq)
+  trainer.train()
 
-  for n_episode in range(nbr_episodes):
-    score = trainer.run_episode(n_episode, render=n_episode % render_freq == 0) # TODO: How to turn of rendering?
-    print("Episode: {}/{}     Score: {:.2f}".format(n_episode, nbr_episodes, score))
-
+  # Clean up
   if record:
     env.close()
 
+  # Save trained agent
   agent.save(save)
 
 

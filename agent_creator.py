@@ -3,7 +3,7 @@ from deep_q_agent import DQAgent
 from env_wrapper import pick_env
 
 
-def agent_creator(agent_string, env):
+def agent_creator(agent_type, env):
   env_info = pick_env(env)
 
   picker = {
@@ -11,5 +11,5 @@ def agent_creator(agent_string, env):
     'deep_q': DQAgent
   }
 
-  agent = picker.get(agent_string) # TODO: default value
+  agent = picker.get(agent_type) # TODO: default value
   return agent(env_info)

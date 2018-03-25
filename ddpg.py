@@ -2,7 +2,9 @@ import tensorflow as tf
 import numpy as np
 from collections import deque
 import random
-from noise import OrnsteinUhlenbeckActionNoise
+from exploration_noise import Ornstein_uhlenbeck_noise
+from datetime import datetime
+import pathlib
 
 class Actor():
   def __init__(self, sess, env_helper, batch_size, lr=0.0001, tau=0.001):
@@ -14,7 +16,7 @@ class Actor():
 
     self.batch_size = batch_size
     self.tau = tau
-    self.noise_gen = OrnsteinUhlenbeckActionNoise(mu = np.zeros(self.action_dim))
+    self.noise_gen = Ornstein_uhlenbeck_noise(mu = np.zeros(self.action_dim))
 
     self.input, self.output, self.weights = self._build_net('actor_net')
     self.target_input, self.target_output, self.target_weights = self._build_net('target_actor_net')
@@ -191,3 +193,19 @@ class DDPG_agent():
       # Update target networks
       self.actor.train_target()
       self.critic.train_target()
+
+
+  def load(self, path):
+    self.model.load_weights(path)
+
+  def save(self, name):
+    # TODO: Save parameters, score, model, envname
+    if isinstance(name, str): 
+      dir_name = "./saves/last_run/"
+    else:
+      class_name = self.__class__.__name__
+      time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+      dir_name = "./saves/{} {}/".format(class_name, time)
+
+    pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
+    self.model.save_weights("{}model.h5".format(dir_name))
