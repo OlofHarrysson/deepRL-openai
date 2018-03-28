@@ -10,8 +10,8 @@ import pathlib
 from exploration_noise import Epsilon_greedy
 
 class DQAgent:
-  def __init__(self, env_helper, learning_rate=0.0001, batch_size=64,
-               gamma=0.99, tau=0.001):
+  def __init__(self, env_helper, learning_rate=0.001, batch_size=64,
+               gamma=0.95, tau=0.01):
 
     self.state_dim = env_helper.get_state_dim()
     self.action_dim = env_helper.get_action_dim()
@@ -32,11 +32,11 @@ class DQAgent:
 
   def _build_model(self):
     model = Sequential()
-    model.add(Dense(units=64, activation='relu', input_dim=self.state_dim,
+    model.add(Dense(units=16, activation='relu', input_dim=self.state_dim,
               kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(units=128, activation='relu',
+    model.add(Dense(units=16, activation='relu',
               kernel_regularizer=regularizers.l2(0.01)))
-    model.add(Dense(units=64, activation='relu',
+    model.add(Dense(units=16, activation='relu',
               kernel_regularizer=regularizers.l2(0.01)))
     model.add(Dense(units=self.action_dim, activation='linear',
               kernel_regularizer=regularizers.l2(0.01)))
@@ -56,7 +56,7 @@ class DQAgent:
   def train(self, state, action, reward, next_state, done):
     self.memory.append((state, action, reward, next_state, done))
     self._replay_memory()
-    # self._train_target()
+    self._train_target()
 
 
   def _replay_memory(self):
@@ -66,21 +66,21 @@ class DQAgent:
       to_np_array = lambda x: np.reshape(list(x), (len(minibatch),-1))
       state, action, reward, next_state, done = map(to_np_array, zip(*minibatch))
 
-      next_q = self.model.predict(next_state)
+      target_next_q = self.target_model.predict_on_batch(next_state)
 
       # Q(s,a) = r + γ * max Q(s',a)
-      q = reward + (1 - done) * self.gamma * np.amax(next_q, axis=1,
+      q = reward + (1 - done) * self.gamma * np.amax(target_next_q, axis=1,
                                                      keepdims=True)
       q = q.astype(np.float32) # Depends on your keras options
 
-      y = self.model.predict(state)
+      y = self.model.predict_on_batch(state)
 
       mask = np.zeros((self.batch_size, self.action_dim))
       mask[np.arange(self.batch_size), action.flatten()] = 1
 
       np.place(y, mask, q.flatten())
 
-      self.model.fit(state, y, epochs=1, verbose=0)
+      self.model.train_on_batch(state, y) # TODO: Train_on_batch
 
 
   def _train_target(self): # TODO: Soft update not working
