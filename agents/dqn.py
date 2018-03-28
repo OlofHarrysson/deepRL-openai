@@ -7,9 +7,9 @@ from collections import deque
 import random
 from datetime import datetime
 import pathlib
-from exploration_noise import Epsilon_greedy
+from agent_helpers.exploration_noise import Epsilon_greedy
 
-class DQAgent:
+class DQN_agent:
   def __init__(self, env_helper, learning_rate=0.001, batch_size=64,
                gamma=0.95, tau=0.01):
 
@@ -101,13 +101,14 @@ class DQAgent:
     self.model.load_weights(path)
 
   def save(self, name):
-    # TODO: Save parameters, weights, env, nbr_episodes
+    # TODO: Save parameters, weights, env, nbr_episodes, policy used, target net
+    # TODO: Return all data and create dir+file in main?
     if isinstance(name, str): 
-      dir_name = "./saves/last_run/"
+      dir_name = "../saves/last_run/"
     else:
       class_name = self.__class__.__name__
       time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-      dir_name = "./saves/{} {}/".format(class_name, time)
+      dir_name = "../saves/{} {}/".format(class_name, time)
 
     pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
     self.model.save_weights("{}model.h5".format(dir_name))

@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from collections import deque
 import random
-from exploration_noise import Ornstein_uhlenbeck_noise
+from agent_helpers.exploration_noise import Ornstein_uhlenbeck_noise
 from datetime import datetime
 import pathlib
 
@@ -195,17 +195,21 @@ class DDPG_agent():
       self.critic.train_target()
 
 
+  def create_noise_generator(self, nbr_episodes):
+    pass # TODO: Figure out what Ornstein parameters should depend on
+
+
   def load(self, path):
     self.model.load_weights(path)
 
   def save(self, name):
     # TODO: Save parameters, score, model, envname
     if isinstance(name, str): 
-      dir_name = "./saves/last_run/"
+      dir_name = "../saves/last_run/"
     else:
       class_name = self.__class__.__name__
       time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-      dir_name = "./saves/{} {}/".format(class_name, time)
+      dir_name = "../saves/{} {}/".format(class_name, time)
 
     pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
     self.model.save_weights("{}model.h5".format(dir_name))

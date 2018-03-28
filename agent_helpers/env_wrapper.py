@@ -7,10 +7,14 @@ def pick_env(env):
     'CartPoleEnv': Cartpole,
     'LunarLander': LunarLander
   }
-  # hej = switcher.get(argument, "nothing") # TODO: Bad errors
 
-  env_info = picker.get(env.env.__class__.__name__)
-  return env_info(env)
+  env_helper = picker.get(env.env.__class__.__name__)
+
+  if not env_helper:
+    available_env = list(picker.keys())
+    raise Exception("{} is not a supported environment. Choose between {}".format(env, ", ".join(available_env)))
+
+  return env_helper(env)
 
 
 # ~~~~~~~~~~~~~~  Superclass ~~~~~~~~~~~~~~
