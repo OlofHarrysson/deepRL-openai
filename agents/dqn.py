@@ -11,7 +11,7 @@ from agent_helpers.exploration_noise import Epsilon_greedy
 
 class DQN_agent:
   def __init__(self, env_helper, learning_rate=0.001, batch_size=64,
-               gamma=0.95, tau=0.01):
+               gamma=0.99, tau=0.01):
 
     self.state_dim = env_helper.get_state_dim()
     self.action_dim = env_helper.get_action_dim()
@@ -55,8 +55,10 @@ class DQN_agent:
 
   def train(self, state, action, reward, next_state, done):
     self.memory.append((state, action, reward, next_state, done))
-    self._replay_memory()
+    loss, max_q = self._replay_memory()
     self._train_target()
+
+    return loss, max_q
 
 
   def _replay_memory(self):
@@ -69,8 +71,8 @@ class DQN_agent:
       target_next_q = self.target_model.predict_on_batch(next_state)
 
       # Q(s,a) = r + γ * max Q(s',a)
-      q = reward + (1 - done) * self.gamma * np.amax(target_next_q, axis=1,
-                                                     keepdims=True)
+      q = reward + (1 - done) * self.gamma * np.amax(target_next_q,
+                                                     axis=1, keepdims=True)
       q = q.astype(np.float32) # Depends on your keras options
 
       y = self.model.predict_on_batch(state)
@@ -80,7 +82,10 @@ class DQN_agent:
 
       np.place(y, mask, q.flatten())
 
-      self.model.train_on_batch(state, y) # TODO: Train_on_batch
+      loss = self.model.train_on_batch(state, y)
+
+      return loss, np.amax(target_next_q, axis=1, keepdims=True)
+    return None, None
 
 
   def _train_target(self): # TODO: Soft update not working
