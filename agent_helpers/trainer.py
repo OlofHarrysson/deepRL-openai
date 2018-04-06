@@ -45,11 +45,8 @@ class Trainer():
     state = self.env.reset()
     state = np.reshape(state, [1, self.agent.get_state_dim()])
 
-
-
     losses = []
     max_qs = np.array([])
-
 
     score = 0
     for t in range(self.episode_length):
@@ -58,7 +55,8 @@ class Trainer():
       next_state, reward, done = self.take_step(action[0])
       score += reward[0]
 
-      loss, max_q = self.agent.train(state, action, reward, next_state, done)      
+      self.agent.add_memory(state, action, reward, next_state, done)
+      loss, max_q = self.agent.train()      
       state = next_state
 
       if render:

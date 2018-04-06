@@ -53,7 +53,7 @@ class DQN_agent:
     return np.argmax(action_values, axis=1)
 
 
-  def train(self, state, action, reward, next_state, done):
+  def train(self):
     loss, max_q = self.replay_memory()
     self._train_target()
     return loss, max_q
