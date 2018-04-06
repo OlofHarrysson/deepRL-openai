@@ -54,15 +54,17 @@ class DQN_agent:
 
 
   def train(self, state, action, reward, next_state, done):
-    self.memory.append((state, action, reward, next_state, done))
-    loss, max_q = self._replay_memory()
+    loss, max_q = self.replay_memory()
     self._train_target()
-
     return loss, max_q
 
 
-  def _replay_memory(self):
-    if len(self.memory) > self.batch_size:
+  def add_memory(self, state, action, reward, next_state, done):
+    self.memory.append((state, action, reward, next_state, done))
+
+
+  def replay_memory(self):
+    if len(self.memory) >= self.batch_size:
       minibatch = random.sample(self.memory, self.batch_size)
 
       to_np_array = lambda x: np.reshape(list(x), (len(minibatch),-1))
@@ -85,10 +87,9 @@ class DQN_agent:
       loss = self.model.train_on_batch(state, y)
 
       return loss, np.amax(target_next_q, axis=1, keepdims=True)
-    return None, None
 
 
-  def _train_target(self): # TODO: Soft update not working
+  def _train_target(self):
     model_w = self.model.get_weights()
     target_w = self.target_model.get_weights()
     tau = self.tau
