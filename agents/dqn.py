@@ -82,6 +82,8 @@ class DQN_agent:
       mask = np.zeros((self.batch_size, self.action_dim))
       mask[np.arange(self.batch_size), action.flatten()] = 1
 
+      # Replace the y values with q, but only for taken actions.
+      # Non replaced output nodes/weights wont change during update
       np.place(y, mask, q.flatten())
 
       loss = self.model.train_on_batch(state, y)

@@ -19,7 +19,7 @@ class Logger():
     self.add_q = tf.summary.scalar("Q-val", self.input)
     self.add_score = tf.summary.scalar("Score", self.input)
     self.add_noise = tf.summary.scalar("Noise", self.input)
-    self.add_gradients = tf.summary.scalar("Gradients", self.input)
+    self.add_gradients = tf.summary.scalar("Gradients", self.input) # TODO, get this
 
     self.sess.run(tf.global_variables_initializer())
 
