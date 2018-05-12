@@ -6,7 +6,7 @@ from agent_helpers.trainer import Trainer
 def parse():
   p = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
 
-  p.add_argument("-n", "--nbr_episodes", type=int,
+  p.add_argument("-n", "--n_train_episodes", type=int,
                  help="Number of episodes the agent is going to run")
 
   p.add_argument("-m", "--max_episode_length", type=int,
@@ -31,7 +31,7 @@ def parse():
   return vars(args)
 
 
-def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
+def main(n_train_episodes = 500, episode_length = 500, render_freq = 20,
          save = 'overwritable', load_path = None, record = False,
          agent_type = 'dqn', env_type = 'CartPole-v1'):
 
@@ -47,20 +47,22 @@ def main(nbr_episodes = 1000, episode_length = 500, render_freq = 20,
   if record:
     env = gym.wrappers.Monitor(env, './saves/last_run', force=True)
 
-  # Load pre-trained agent
-  if load_path: # TODO: loading-mode that doesn't update network
-    agent.load(load_path)
-
   # Train agent
-  trainer = Trainer(env, agent, nbr_episodes, episode_length, render_freq)
-  trainer.train()
+  trainer = Trainer(env, agent, n_train_episodes, episode_length, render_freq)
+
+  n_test_episodes = 30
+  if load_path: # TODO: loading-mode that doesn't update network
+    agent.load(load_path) # Load pre-trained agent
+    trainer.test(n_test_episodes)
+  else:
+    trainer.train(n_train_episodes)
+    trainer.test(n_test_episodes)
+    
+    agent.save(save) # Save trained agent
 
   # Clean up
   if record:
     env.close()
-
-  # Save trained agent
-  agent.save(save)
 
 
 if __name__ == "__main__":

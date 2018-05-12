@@ -35,3 +35,6 @@ class Epsilon_greedy:
   def reduce_noise(self):
     self.epsilon *= self.epsilon_decay
 
+  def set_to_minimum(self):
+    self.epsilon = self.epsilon_min
+

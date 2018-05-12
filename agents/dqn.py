@@ -3,6 +3,7 @@ import numpy as np
 from collections import deque
 import random
 from agent_helpers.exploration_noise import Epsilon_greedy
+# from tensorflow.saved_model import simple_save
 
 class DQN_agent:
   def __init__(self, env_helper, lr=0.001, batch_size=64,
@@ -56,12 +57,6 @@ class DQN_agent:
   def predict(self, state):
     return self.sess.run(self.output, {self.input: state})
 
-  def train_net(self, state, y):
-    loss, _ = self.sess.run([self.loss, self.optimizer], {
-        self.input: state,
-        self.y:y})
-    return loss
-
 
   def act(self, state, epsilon, training=False):
     if np.random.rand() <= epsilon and training:
@@ -74,6 +69,16 @@ class DQN_agent:
     loss, max_q = self.replay_memory()
     self._train_target()
     return loss, max_q
+
+  def train_net(self, state, y):
+    loss, _ = self.sess.run([self.loss, self.optimizer], {
+        self.input: state,
+        self.y:y})
+    return loss
+
+
+  def _train_target(self):
+    self.sess.run(self.update_target)
 
 
   def add_memory(self, state, action, reward, next_state, done):
@@ -110,21 +115,28 @@ class DQN_agent:
       return loss, np.amax(target_next_q, axis=1, keepdims=True)
 
 
-  def _train_target(self):
-    self.sess.run(self.update_target)
-
-
   def create_noise_generator(self, nbr_episodes):
     return Epsilon_greedy(nbr_episodes)
 
 
   def load(self, path):
-    self.model.load_weights(path)
+    saver = tf.train.Saver()
+
+    print("Model restoring ###########################")
+    saver.restore(self.sess, "./saves/test/model.ckpt")
 
   def save(self, name):
     # TODO: Save parameters, weights, env, nbr_episodes, policy used, target net
     # TODO: Return all data and create dir+file in main?
-    pass
+    # simple_save(self.sess, 'export_dir', inputs={'hej': 'da'})
+    saver = tf.train.Saver()
+
+    with self.sess as sess:
+      save_path = saver.save(sess, "./saves/test/model.ckpt")
+      print("Model saved in path: %s" % save_path)
+
+
+
     # if isinstance(name, str): 
     #   dir_name = "../saves/last_run/"
     # else:
