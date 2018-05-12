@@ -47,6 +47,7 @@ class Trainer():
 
     losses = []
     max_qs = np.array([])
+    actions = []
 
     score = 0
     for t in range(self.episode_length):
@@ -64,11 +65,12 @@ class Trainer():
 
       losses.append(loss)
       max_qs = np.append(max_qs, max_q)
+      actions.append(action[0])
 
       if done:
         break
 
-    self.logger.add(episode_number, score, noise, max_qs, losses)
+    self.logger.add(episode_number, score, noise, max_qs, losses, actions)
     return score
 
 
