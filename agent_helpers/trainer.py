@@ -14,12 +14,15 @@ class Trainer():
   def train(self, n_episodes):
     self.fill_memory()
     print("Training ...")
-    self._run_episodes(n_episodes)
+    self._run_episodes(n_episodes, training=True)
+    self.agent.lrt()
+
 
   def test(self, n_episodes):
     self.noise_generator.set_to_minimum()
     print("Testing ...")
-    self._run_episodes(n_episodes)
+    self._run_episodes(n_episodes, training=False)
+
 
   def fill_memory(self):
     # Fills agents memory until it's big enough to train on
@@ -27,51 +30,52 @@ class Trainer():
       self.random_agent()
 
 
-  def _run_episodes(self, n_episodes):
+  def _run_episodes(self, n_episodes, training):
     for n_episode in range(1, n_episodes + 1):
       render = n_episode % self.render_freq == 0
-      score = self._run_episode(n_episode, render=render)
+      score = self._run_episode(n_episode, training, render)
       self.noise_generator.reduce_noise()
 
       print("Episode: {}/{}     Score: {:.2f}".format(n_episode,
         n_episodes, score))
 
-  def _run_episode(self, episode_number, render, training):
+
+  def _run_episode(self, episode_number, training, render):
     state = self.env.reset()
     state = np.reshape(state, [1, self.agent.get_state_dim()])
 
     score = 0
     for t in range(self.episode_length):
       noise = self.noise_generator()
-      action = self.agent.act(state, noise, training=True)
+      action = self.agent.act(state, noise)
       next_state, reward, done = self.take_step(action[0])
       score += reward[0]
 
       if training:
         self.agent.add_memory(state, action, reward, next_state, done)
 
+      state = next_state
+
       if render:
         self.env.render()
-
-      state = next_state
 
       if done:
         break
 
     if training:
-      losses, max_q = self._update_agent()
+      losses, max_qs = self._update_agent(score)
       self.logger.add(episode_number, score, noise, max_qs, losses)
     else:
-      pass
-      # Add testing logs
-
+      self.logger.add_test(episode_number, score)
     
     return score
 
-  def _update_agent(self):
+  def _update_agent(self, score):
     losses = []
     max_qs = np.array([])
 
+    # TODO: range could be int(501.0 - score)?
+    # TODO: Works for env with scores different than cartpole
     for _ in range(10): # TODO, meta parameter?
       loss, max_q = self.agent.train()
       losses.append(loss)
@@ -93,39 +97,6 @@ class Trainer():
 
       if done:
         break
-
-
-  # def _run_episode(self, episode_number, render):
-  #   state = self.env.reset()
-  #   state = np.reshape(state, [1, self.agent.get_state_dim()])
-
-  #   losses = []
-  #   max_qs = np.array([])
-  #   actions = []
-
-  #   score = 0
-  #   for t in range(self.episode_length):
-  #     noise = self.noise_generator()
-  #     action = self.agent.act(state, noise, training=True)
-  #     next_state, reward, done = self.take_step(action[0])
-  #     score += reward[0]
-
-  #     self.agent.add_memory(state, action, reward, next_state, done)
-  #     loss, max_q = self.agent.train()      
-  #     state = next_state
-
-  #     if render:
-  #       self.env.render()
-
-  #     losses.append(loss)
-  #     max_qs = np.append(max_qs, max_q)
-  #     actions.append(action[0])
-
-  #     if done:
-  #       break
-
-  #   self.logger.add(episode_number, score, noise, max_qs, losses, actions)
-  #   return score
 
 
   def take_step(self, action):

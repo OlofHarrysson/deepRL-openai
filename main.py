@@ -9,6 +9,9 @@ def parse():
   p.add_argument("-n", "--n_train_episodes", type=int,
                  help="Number of episodes the agent is going to run")
 
+  p.add_argument("-t", "--n_test_episodes", type=int,
+                 help="Number of episodes the agent is going to be evaluated upon")
+
   p.add_argument("-m", "--max_episode_length", type=int,
                  help="Number of steps in an episode")
 
@@ -16,7 +19,7 @@ def parse():
                  help="Render the environment every x-th episode")
 
   p.add_argument("-s", "--save", action="store_true",
-                 help="Saves the model, score and parameters used")
+                 help="Saves the model, score and parameters. Program always saves the last run temporarily")
 
   p.add_argument("-l", "--load_path", type=str,
                  help="Loads a previous model from path")
@@ -27,12 +30,17 @@ def parse():
   p.add_argument("-e", "--env_type", type=str,
                  help="Specifies which environment to use. Currently supports: CartPole-v1, Pendulum-v0, LunarLanderContinuous-v2")
 
+  p.add_argument("-d", "--record", action="store_true",
+                 help="Records the agents actions")
+
+
+
   args = p.parse_args()
   return vars(args)
 
 
-def main(n_train_episodes = 500, episode_length = 500, render_freq = 20,
-         save = 'overwritable', load_path = None, record = False,
+def main(n_train_episodes = 500, n_test_episodes = 50, episode_length = 500,
+         render_freq = 99999, save = 'overwritable', load_path = None, record = False,
          agent_type = 'dqn', env_type = 'CartPole-v1'):
 
   # env = gym.make('CartPole-v1')
@@ -50,15 +58,13 @@ def main(n_train_episodes = 500, episode_length = 500, render_freq = 20,
   # Train agent
   trainer = Trainer(env, agent, n_train_episodes, episode_length, render_freq)
 
-  n_test_episodes = 30
-  if load_path: # TODO: loading-mode that doesn't update network
-    agent.load(load_path) # Load pre-trained agent
+  if load_path:
+    agent.load(load_path) # Loads pre-trained agent with past parameters
     trainer.test(n_test_episodes)
   else:
     trainer.train(n_train_episodes)
     trainer.test(n_test_episodes)
-    
-    agent.save(save) # Save trained agent
+    agent.save(save, n_train_episodes, episode_length, env_type) # Save trained agent
 
   # Clean up
   if record:

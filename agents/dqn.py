@@ -3,20 +3,25 @@ import numpy as np
 from collections import deque
 import random
 from agent_helpers.exploration_noise import Epsilon_greedy
-# from tensorflow.saved_model import simple_save
+from datetime import datetime
+import pathlib
+import json
 
 class DQN_agent:
-  def __init__(self, env_helper, lr=0.001, batch_size=64,
-               gamma=0.99, tau=0.01):
+  def __init__(self, env_helper, lr = 0.001, batch_size = 64,
+               gamma = 0.99, tau = 0.01, memory_size = 50000, lr_decay = 100):
 
     self.sess = tf.Session()
 
     self.state_dim = env_helper.get_state_dim()
     self.action_dim = env_helper.get_action_dim()
-    self.lr = lr
+    self.lr_inital = lr
+    self.lr_decay_inital = lr_decay
+    self.global_step = tf.Variable(0, trainable=False)
+    self.lr = tf.train.exponential_decay(lr, self.global_step, lr_decay, 0.99, staircase=True)
 
     self.batch_size = batch_size
-    self.memory = deque(maxlen=50000)
+    self.memory = deque(maxlen = memory_size)
 
     self.gamma = gamma
     self.tau = tau
@@ -25,7 +30,7 @@ class DQN_agent:
 
     self.y = tf.placeholder(tf.float32, [None, self.action_dim])
     self.loss = tf.reduce_mean(tf.square(tf.subtract(self.y, self.output), name='loss'))
-    self.optimizer = tf.train.AdamOptimizer(lr).minimize(self.loss)
+    self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.loss, global_step=self.global_step)
 
     # target_weights = tau * weights + (1-tau) * target_weights
     update = lambda w, t_w: t_w.assign(tf.scalar_mul(self.tau, w) + tf.scalar_mul(1. - self.tau, t_w))
@@ -58,8 +63,8 @@ class DQN_agent:
     return self.sess.run(self.output, {self.input: state})
 
 
-  def act(self, state, epsilon, training=False):
-    if np.random.rand() <= epsilon and training:
+  def act(self, state, epsilon):
+    if np.random.rand() <= epsilon:
       return [np.random.randint(self.action_dim)]
     action_values = self.predict(state)
     return np.argmax(action_values, axis=1)
@@ -83,6 +88,11 @@ class DQN_agent:
 
   def add_memory(self, state, action, reward, next_state, done):
     self.memory.append((state, action, reward, next_state, done))
+
+
+  def lrt(self):
+    lr = self.sess.run(self.lr)
+    print(lr)
 
 
   def replay_memory(self):
@@ -119,30 +129,52 @@ class DQN_agent:
     return Epsilon_greedy(nbr_episodes)
 
 
-  def load(self, path):
+  def load(self, dir_name):
+  # TODO: Make it nicer regarding that every parameter has a line to save/load.
+  # TODO: Move it away from DQN when DDPG.py is working again
+    dir_name = "./saves/{}/".format(dir_name)
+
+    with open('{}parameters.txt'.format(dir_name), 'r') as file:
+      agent_params = json.load(file)
+
+    self.lr = agent_params['learning_rate']
+    self.batch_size = agent_params['batch_size']
+    self.tau = agent_params['tau']
+    self.gamma = agent_params['gamma']
+    self.memory = deque(maxlen=agent_params['memory_size'])
+
     saver = tf.train.Saver()
+    saver.restore(self.sess, "{}model.ckpt".format(dir_name))
+    print("Model succesfully loaded")
 
-    print("Model restoring ###########################")
-    saver.restore(self.sess, "./saves/test/model.ckpt")
+  def save(self, name, n_train_episodes, episode_length, env_type):
+    # TODO: Move it away from DQN when DDPG.py is working again
+    if isinstance(name, str): 
+      dir_name = "./saves/last_run/"
+    else:
+      class_name = self.__class__.__name__
+      time = datetime.utcnow().strftime("%m-%d-%H%M%S")
+      dir_name = "./saves/{}_{}/".format(class_name, time)
 
-  def save(self, name):
-    # TODO: Save parameters, weights, env, nbr_episodes, policy used, target net
-    # TODO: Return all data and create dir+file in main?
-    # simple_save(self.sess, 'export_dir', inputs={'hej': 'da'})
+    pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
+    with open('{}parameters.txt'.format(dir_name), 'w') as file:
+      agent_params = {}
+      agent_params['learning_rate'] = self.lr_inital
+      agent_params['learning_rate_decay'] = self.lr_decay_inital
+      agent_params['batch_size'] = self.batch_size
+      agent_params['tau'] = self.tau
+      agent_params['gamma'] = self.gamma
+      agent_params['memory_size'] = self.memory.maxlen
+      file.write(json.dumps(agent_params))
+
+    with open('{}parameter_info.txt'.format(dir_name), 'w') as file:
+      data = {}
+      data['n_train_episodes'] = n_train_episodes
+      data['episode_length'] = episode_length
+      data['env_type'] = env_type
+      file.write(json.dumps(data))
+
     saver = tf.train.Saver()
-
     with self.sess as sess:
-      save_path = saver.save(sess, "./saves/test/model.ckpt")
+      save_path = saver.save(sess, "{}model.ckpt".format(dir_name))
       print("Model saved in path: %s" % save_path)
-
-
-
-    # if isinstance(name, str): 
-    #   dir_name = "../saves/last_run/"
-    # else:
-    #   class_name = self.__class__.__name__
-    #   time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    #   dir_name = "../saves/{} {}/".format(class_name, time)
-
-    # pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
-    # self.model.save_weights("{}model.h5".format(dir_name))

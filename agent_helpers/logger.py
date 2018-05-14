@@ -19,9 +19,8 @@ class Logger():
     self.add_loss = tf.summary.scalar("Loss", self.input)
     self.add_q = tf.summary.scalar("Q-val", self.input)
     self.add_score = tf.summary.scalar("Score", self.input)
+    self.add_test_score = tf.summary.scalar("Test score", self.input)
     self.add_noise = tf.summary.scalar("Noise", self.input)
-    self.add_action_mean = tf.summary.scalar("Action_mean", self.input)
-    self.add_action_std = tf.summary.scalar("Action_std", self.input)
     self.add_gradients = tf.summary.scalar("Gradients", self.input) # TODO, get this
 
     # Histogram summaries
@@ -52,23 +51,17 @@ class Logger():
     writer.add_summary(summary, episode_number)
 
 
-  def add(self, episode_number, score, noise, max_qs, losses, actions):
-    # self.add_losses(losses, episode_number)
-
+  def add(self, episode_number, score, noise, max_qs, losses):
     mma_loss = [max(losses), min(losses), sum(losses) / len(losses)]
     writers = [self.max_writer, self.min_writer, self.avg_writer]
     self._add_scalars(self.add_loss, mma_loss, writers, episode_number)
 
-
     mma_q = [max(max_qs), min(max_qs), sum(max_qs) / len(max_qs)]
     self._add_scalars(self.add_q, mma_q, writers, episode_number)
-
 
     self._add_scalar(self.add_score, score, self.val_writer, episode_number)
     self._add_scalar(self.add_noise, noise, self.val_writer, episode_number)
 
-    mean = np.mean(actions)
-    std = np.std(actions)
-    self._add_scalar(self.add_action_mean, mean, self.val_writer, episode_number)
-    self._add_scalar(self.add_action_std, std, self.val_writer, episode_number)
 
+  def add_test(self, episode_number, score):
+    self._add_scalar(self.add_test_score, score, self.val_writer, episode_number)
