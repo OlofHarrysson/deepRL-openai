@@ -1,1 +1,1 @@
-<img src="./videoscart_pole.gif" alt="alt text">
+<img src="./videos/cart_pole.gif" alt="alt text">
