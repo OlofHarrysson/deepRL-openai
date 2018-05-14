@@ -1,1 +1,1 @@
-<video src="./videos/cart_pole.mp4" width="600" height="400" controls preload></video>
+<video src="./videos/cart_pole.mp4" width="1200" height="800" controls preload></video>
