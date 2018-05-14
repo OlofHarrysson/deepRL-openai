@@ -23,5 +23,9 @@ done
 # concat videos
 ffmpeg -f concat -safe 0 -i $dirn/concat_list.txt -c copy $dirn/output.mp4
 
+ffmpeg -y -i $dirn/output.mp4 -vf fps=50,scale=320:-1:flags=lanczos,palettegen $dirn/palette.png
+
+ffmpeg -i $dirn/output.mp4 -i $dirn/palette.png -filter_complex "fps=50,scale=320:-1:flags=lanczos[x];[x][1:v]paletteuse" output.gif
+
 cp ./$dirn/output.mp4 .
 rm -r ./tmp
