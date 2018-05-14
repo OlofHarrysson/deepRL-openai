@@ -47,7 +47,7 @@ def get_images(file_path):
 if __name__ == "__main__":
   images = []
 
-  dir_path = pathlib.Path('./saves/last_run/')
+  dir_path = pathlib.Path('../saves/last_run/')
 
   for file_path in dir_path.glob("*.json"):
     file_path.unlink()

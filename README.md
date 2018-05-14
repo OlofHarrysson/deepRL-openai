@@ -1,1 +1,1 @@
-<img src="./post_processing/gifs/swingup.gif" alt="alt text" width="250" height="250">
+<img src="./videos/cart_pole.mp4" alt="alt text" width="250" height="250">
