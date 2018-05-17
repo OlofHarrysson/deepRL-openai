@@ -4,14 +4,14 @@ from datetime import datetime
 
 
 class Logger():
-  def __init__(self):
+  def __init__(self, agent_name, run_id):
     self.sess = tf.Session()
 
     time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-    self.max_writer = tf.summary.FileWriter("./runs/max-{}".format(time))
-    self.min_writer = tf.summary.FileWriter("./runs/min-{}".format(time))
-    self.avg_writer = tf.summary.FileWriter("./runs/avg-{}".format(time))
-    self.val_writer = tf.summary.FileWriter("./runs/value-{}".format(time))
+    self.max_writer = tf.summary.FileWriter("./runs/{}-{}-{}-max".format(run_id, agent_name, time))
+    self.min_writer = tf.summary.FileWriter("./runs/{}-{}-{}-min".format(run_id, agent_name, time))
+    self.avg_writer = tf.summary.FileWriter("./runs/{}-{}-{}-avg".format(run_id, agent_name, time))
+    self.val_writer = tf.summary.FileWriter("./runs/{}-{}-{}-value".format(run_id, agent_name, time))
 
     self.input = tf.placeholder(tf.float32)
 

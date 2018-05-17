@@ -2,6 +2,9 @@ import argparse
 import gym
 from agent_helpers.agent_creator import agent_creator
 from agent_helpers.trainer import Trainer
+import hashlib
+from datetime import datetime
+
 
 def parse():
   p = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
@@ -50,21 +53,22 @@ def main(n_train_episodes = 500, n_test_episodes = 50, episode_length = 500,
 
   env = gym.make(env_type) # TODO: Check the env_type input / give options
   agent = agent_creator(agent_type, env)
+  run_id = hashlib.sha256(datetime.now().strftime("%s").encode()).hexdigest()[:5]
 
   # Record videos & more
   if record:
     env = gym.wrappers.Monitor(env, './saves/last_run', force=True)
 
   # Train agent
-  trainer = Trainer(env, agent, n_train_episodes, episode_length, render_freq)
+  trainer = Trainer(env, agent, n_train_episodes, episode_length, render_freq, run_id)
 
   if load_path:
     agent.load(load_path) # Loads pre-trained agent with past parameters
     trainer.test(n_test_episodes)
   else:
     trainer.train(n_train_episodes)
-    trainer.test(n_test_episodes)
-    agent.save(save, n_train_episodes, episode_length, env_type) # Save trained agent
+    total_score = trainer.test(n_test_episodes)
+    agent.save(save, n_train_episodes, episode_length, env_type, total_score/n_test_episodes, run_id) # Save trained agent
 
   # Clean up
   if record:

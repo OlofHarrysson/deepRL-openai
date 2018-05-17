@@ -2,26 +2,26 @@ import numpy as np
 from agent_helpers.logger import Logger
 
 class Trainer():
-  def __init__(self, env, agent, nbr_episodes, episode_length, render_freq):
+  def __init__(self, env, agent, nbr_episodes, episode_length, render_freq, run_id):
     self.env = env
     self.agent = agent
     self.episode_length = episode_length
     self.render_freq = render_freq
     self.noise_generator = agent.create_noise_generator(nbr_episodes)
-    self.logger = Logger()
+    self.logger = Logger(str(self.agent), run_id)
 
 
   def train(self, n_episodes):
     self.fill_memory()
     print("Training ...")
     self._run_episodes(n_episodes, training=True)
-    self.agent.lrt()
 
 
   def test(self, n_episodes):
     self.noise_generator.set_to_minimum()
     print("Testing ...")
-    self._run_episodes(n_episodes, training=False)
+    total_score = self._run_episodes(n_episodes, training=False)
+    return total_score
 
 
   def fill_memory(self):
@@ -31,13 +31,17 @@ class Trainer():
 
 
   def _run_episodes(self, n_episodes, training):
+    combined_score = 0
     for n_episode in range(1, n_episodes + 1):
       render = n_episode % self.render_freq == 0
       score = self._run_episode(n_episode, training, render)
+      combined_score += score
       self.noise_generator.reduce_noise()
 
       print("Episode: {}/{}     Score: {:.2f}".format(n_episode,
         n_episodes, score))
+
+    return combined_score
 
 
   def _run_episode(self, episode_number, training, render):

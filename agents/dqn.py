@@ -90,11 +90,6 @@ class DQN_agent:
     self.memory.append((state, action, reward, next_state, done))
 
 
-  def lrt(self):
-    lr = self.sess.run(self.lr)
-    print(lr)
-
-
   def replay_memory(self):
     if len(self.memory) >= self.batch_size:
       minibatch = random.sample(self.memory, self.batch_size)
@@ -147,14 +142,13 @@ class DQN_agent:
     saver.restore(self.sess, "{}model.ckpt".format(dir_name))
     print("Model succesfully loaded")
 
-  def save(self, name, n_train_episodes, episode_length, env_type):
+  def save(self, name, n_train_episodes, episode_length, env_type, score, run_id):
     # TODO: Move it away from DQN when DDPG.py is working again
     if isinstance(name, str): 
       dir_name = "./saves/last_run/"
     else:
       class_name = self.__class__.__name__
-      time = datetime.utcnow().strftime("%m-%d-%H%M%S")
-      dir_name = "./saves/{}_{}/".format(class_name, time)
+      dir_name = "./saves/{}_{}/".format(run_id, class_name)
 
     pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
     with open('{}parameters.txt'.format(dir_name), 'w') as file:
@@ -172,9 +166,13 @@ class DQN_agent:
       data['n_train_episodes'] = n_train_episodes
       data['episode_length'] = episode_length
       data['env_type'] = env_type
+      data['score'] = score
       file.write(json.dumps(data))
 
     saver = tf.train.Saver()
     with self.sess as sess:
       save_path = saver.save(sess, "{}model.ckpt".format(dir_name))
       print("Model saved in path: %s" % save_path)
+
+  def __str__(self):
+    return "DQN-agent"
