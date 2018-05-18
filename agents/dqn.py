@@ -3,7 +3,6 @@ import numpy as np
 from collections import deque
 import random
 from agent_helpers.exploration_noise import Epsilon_greedy
-from datetime import datetime
 import pathlib
 import json
 
@@ -70,10 +69,13 @@ class DQN_agent:
     return np.argmax(action_values, axis=1)
 
 
-  def train(self):
-    loss, max_q = self.replay_memory()
+  def train(self, logger):
+    loss, max_q = self._replay_memory()
     self._train_target()
-    return loss, max_q
+
+    g_step = tf.train.global_step(self.sess, self.global_step)
+    logger.add_agent_specifics(loss, max_q, g_step)
+
 
   def train_net(self, state, y):
     loss, _ = self.sess.run([self.loss, self.optimizer], {
@@ -90,7 +92,7 @@ class DQN_agent:
     self.memory.append((state, action, reward, next_state, done))
 
 
-  def replay_memory(self):
+  def _replay_memory(self):
     if len(self.memory) >= self.batch_size:
       minibatch = random.sample(self.memory, self.batch_size)
 
@@ -117,7 +119,7 @@ class DQN_agent:
 
       np.amax(target_next_q, axis=1, keepdims=True)
 
-      return loss, np.amax(target_next_q, axis=1, keepdims=True)
+      return loss, np.amax(target_next_q, axis=1, keepdims=False)
 
 
   def create_noise_generator(self, nbr_episodes):

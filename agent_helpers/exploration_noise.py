@@ -10,16 +10,21 @@ class Ornstein_uhlenbeck_noise:
     self.reset()
 
   def __call__(self):
-    x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
+    return self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
         self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
-    self.x_prev = x
-    return x
+
+  def reduce_noise(self):
+    self.x_prev = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
+        self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
 
   def reset(self):
     self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(self.mu)
 
   def __repr__(self):
     return 'Ornstein_uhlenbeck_noise(mu={}, sigma={})'.format(self.mu, self.sigma)
+
+  def set_to_minimum(self):
+    pass # TODO: How to implement this method? Random uniform noise?
 
 
 class Epsilon_greedy:

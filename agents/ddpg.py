@@ -3,16 +3,24 @@ import numpy as np
 from collections import deque
 import random
 from agent_helpers.exploration_noise import Ornstein_uhlenbeck_noise
-from datetime import datetime
 import pathlib
+import json
 
 class Actor():
-  def __init__(self, sess, env_helper, batch_size, lr=0.0001, tau=0.001):
+  def __init__(self, sess, env_helper, batch_size, lr = 0.0001, tau = 0.001,
+               lr_decay = 100):
     self.sess = sess
     self.state_dim = env_helper.get_state_dim()
     self.action_dim = env_helper.get_action_dim()
     self.action_bound = env_helper.get_action_bound()
     self.env_helper = env_helper
+
+    self.global_step = tf.Variable(0, trainable=False)
+
+    self.lr_initial = lr
+    self.lr_decay_initial = lr_decay
+
+    self.lr = tf.train.exponential_decay(lr, self.global_step, lr_decay, 0.99, staircase=True)
 
     self.batch_size = batch_size
     self.tau = tau
@@ -29,7 +37,7 @@ class Actor():
         gradients = list(map(lambda x: tf.divide(x, self.batch_size),
                              unnormalized_gradients))
       
-      self.optimizer = tf.train.AdamOptimizer(lr).apply_gradients(zip(gradients, self.weights))
+      self.optimizer = tf.train.AdamOptimizer(self.lr).apply_gradients(zip(gradients, self.weights), global_step=self.global_step)
 
       # target_weights = tau * weights + (1-tau) * target_weights
       update = lambda w, t_w: t_w.assign(tf.scalar_mul(self.tau, w) + tf.scalar_mul(1. - self.tau, t_w))
@@ -74,10 +82,17 @@ class Actor():
 
 
 class Critic():
-  def __init__(self, sess, env_helper, lr=0.001, tau=0.001):
+  def __init__(self, sess, env_helper, lr = 0.001, tau = 0.001, lr_decay = 100):
     self.sess = sess
     self.state_dim = env_helper.get_state_dim()
     self.action_dim = env_helper.get_action_dim()
+
+    self.global_step = tf.Variable(0, trainable=False)
+
+    self.lr_initial = lr
+    self.lr_decay_initial = lr_decay
+
+    self.lr = tf.train.exponential_decay(lr, self.global_step, lr_decay, 0.99, staircase=True)
 
     self.tau = tau
 
@@ -86,8 +101,8 @@ class Critic():
 
     with tf.variable_scope('critic'):
       self.q_val = tf.placeholder(tf.float32, [None, 1])
-      loss = tf.reduce_mean(tf.square(tf.subtract(self.q_val, self.output), name='loss'))
-      self.optimizer = tf.train.AdamOptimizer(lr).minimize(loss)
+      self.loss = tf.reduce_mean(tf.square(tf.subtract(self.q_val, self.output), name='loss'))
+      self.optimizer = tf.train.AdamOptimizer(self.lr).minimize(self.loss, global_step=self.global_step)
 
       self.actor_gradients = tf.gradients(self.output, self.action_input)
 
@@ -122,6 +137,7 @@ class Critic():
   def predict(self, state, action):
     return self.sess.run(self.output, {self.state_input: state, self.action_input: action})
 
+
   def target_predict(self, state, action):
     return self.sess.run(self.target_output, {
                   self.target_state_input: state,
@@ -129,10 +145,11 @@ class Critic():
 
 
   def train(self, state, action, q_val):
-    self.sess.run(self.optimizer, {
+    loss, _ = self.sess.run([self.loss, self.optimizer], {
                   self.state_input: state,
                   self.action_input: action,
                   self.q_val: q_val})
+    return loss
 
 
   def train_target(self):
@@ -149,7 +166,9 @@ class DDPG_agent():
   def __init__(self, env_helper, gamma = 0.99):
     # TODO: Save, load model
     self.sess = tf.Session()
-    self.state_dim = env_helper.get_state_dim() # TODO:
+    self.global_step = tf.Variable(0, trainable=False)
+
+    self.state_dim = env_helper.get_state_dim()
     self.memory = deque(maxlen=5000)
     self.batch_size = 64
 
@@ -169,9 +188,20 @@ class DDPG_agent():
     return self.actor.act(state) if training else self.actor.predict(state)
 
 
-  def train(self, state, action, reward, next_state, done):
+  def add_memory(self, state, action, reward, next_state, done):
     self.memory.append((state, action, reward, next_state, done))
-    self._replay_memory()
+
+
+  def train(self, logger):
+    critic_loss, critic_q_values, actor_gradients = self._replay_memory()
+
+    # Update target networks
+    self.actor.train_target()
+    self.critic.train_target()
+
+    actor_g_step = tf.train.global_step(self.sess, self.actor.global_step)
+    critic_g_step = tf.train.global_step(self.sess, self.critic.global_step)
+    logger.add_agent_specifics(critic_loss, critic_q_values, actor_gradients, actor_g_step, critic_g_step)
 
 
   def _replay_memory(self):
@@ -184,32 +214,60 @@ class DDPG_agent():
       next_a = self.actor.target_predict(next_state)
       next_value = self.critic.target_predict(next_state, next_a)
       q_val = reward + (1 - done) * self.gamma * next_value
-      self.critic.train(state, action, q_val)
+      critic_loss = self.critic.train(state, action, q_val)
 
       # Update actor
       actor_gradients = self.critic.calc_actor_gradients(state, action)
       self.actor.train(state, actor_gradients[0])
 
-      # Update target networks
-      self.actor.train_target()
-      self.critic.train_target()
+      return critic_loss, np.reshape(q_val, -1), np.reshape(actor_gradients, -1)
+
 
 
   def create_noise_generator(self, nbr_episodes):
     pass # TODO: Figure out what Ornstein parameters should depend on
+    return Ornstein_uhlenbeck_noise(mu = np.zeros(self.actor.action_dim))
 
 
   def load(self, path):
     self.model.load_weights(path)
 
-  def save(self, name):
-    # TODO: Save parameters, score, model, envname
+
+  def save(self, name, n_train_episodes, episode_length, env_type, score, run_id):
+    # TODO: Move it away from DQN when DDPG.py is working again
     if isinstance(name, str): 
-      dir_name = "../saves/last_run/"
+      dir_name = "./saves/last_run/"
     else:
       class_name = self.__class__.__name__
-      time = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-      dir_name = "../saves/{} {}/".format(class_name, time)
+      dir_name = "./saves/{}_{}/".format(run_id, class_name)
 
     pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
-    self.model.save_weights("{}model.h5".format(dir_name))
+    with open('{}parameters.txt'.format(dir_name), 'w') as file:
+      agent_params = {}
+      agent_params['actor_learning_rate'] = self.actor.lr_initial
+      agent_params['actor_learning_rate_decay'] = self.actor.lr_decay_initial
+      agent_params['critic_learning_rate'] = self.critic.lr_initial
+      agent_params['critic_learning_rate_decay'] = self.critic.lr_decay_initial
+      agent_params['batch_size'] = self.batch_size
+      agent_params['actor_tau'] = self.actor.tau
+      agent_params['critic_tau'] = self.critic.tau
+      agent_params['gamma'] = self.gamma
+      agent_params['memory_size'] = self.memory.maxlen
+      file.write(json.dumps(agent_params))
+
+    with open('{}parameter_info.txt'.format(dir_name), 'w') as file:
+      data = {}
+      data['n_train_episodes'] = n_train_episodes
+      data['episode_length'] = episode_length
+      data['env_type'] = env_type
+      data['score'] = score
+      file.write(json.dumps(data))
+
+    saver = tf.train.Saver()
+    with self.sess as sess:
+      save_path = saver.save(sess, "{}model.ckpt".format(dir_name))
+      print("Model saved in path: %s" % save_path)
+
+
+  def __str__(self):
+    return "DDPG-agent"

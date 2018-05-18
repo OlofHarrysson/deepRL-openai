@@ -2,6 +2,7 @@ import argparse
 import gym
 from agent_helpers.agent_creator import agent_creator
 from agent_helpers.trainer import Trainer
+from agent_helpers.logger import logger_creator
 import hashlib
 from datetime import datetime
 
@@ -36,6 +37,9 @@ def parse():
   p.add_argument("-d", "--record", action="store_true",
                  help="Records the agents actions")
 
+  p.add_argument("-p", "--random_parameters", action="store_true",
+                 help="Initialises the agent with random parameters within a range")
+
 
 
   args = p.parse_args()
@@ -44,7 +48,7 @@ def parse():
 
 def main(n_train_episodes = 500, n_test_episodes = 50, episode_length = 500,
          render_freq = 99999, save = 'overwritable', load_path = None, record = False,
-         agent_type = 'dqn', env_type = 'CartPole-v1'):
+         agent_type = 'dqn', env_type = 'CartPole-v1', random_parameters = False):
 
   # env = gym.make('CartPole-v1')
   # env = gym.make('LunarLander-v2')
@@ -52,15 +56,18 @@ def main(n_train_episodes = 500, n_test_episodes = 50, episode_length = 500,
   # env = gym.make('Pendulum-v0')
 
   env = gym.make(env_type) # TODO: Check the env_type input / give options
-  agent = agent_creator(agent_type, env)
+  agent = agent_creator(agent_type, env, random_parameters)
+
+  # ID is not unique but used to match runs with saves more easily
   run_id = hashlib.sha256(datetime.now().strftime("%s").encode()).hexdigest()[:5]
+  logger = logger_creator(agent_type, str(agent), run_id)
 
   # Record videos & more
   if record:
     env = gym.wrappers.Monitor(env, './saves/last_run', force=True)
 
   # Train agent
-  trainer = Trainer(env, agent, n_train_episodes, episode_length, render_freq, run_id)
+  trainer = Trainer(env, agent, n_train_episodes, episode_length, render_freq, logger)
 
   if load_path:
     agent.load(load_path) # Loads pre-trained agent with past parameters

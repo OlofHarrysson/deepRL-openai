@@ -1,14 +1,13 @@
 import numpy as np
-from agent_helpers.logger import Logger
 
 class Trainer():
-  def __init__(self, env, agent, nbr_episodes, episode_length, render_freq, run_id):
+  def __init__(self, env, agent, nbr_episodes, episode_length, render_freq, logger):
     self.env = env
     self.agent = agent
     self.episode_length = episode_length
     self.render_freq = render_freq
     self.noise_generator = agent.create_noise_generator(nbr_episodes)
-    self.logger = Logger(str(self.agent), run_id)
+    self.logger = logger
 
 
   def train(self, n_episodes):
@@ -67,25 +66,14 @@ class Trainer():
         break
 
     if training:
-      losses, max_qs = self._update_agent(score)
-      self.logger.add(episode_number, score, noise, max_qs, losses)
+      # TODO: range could be int(501.0 - score)? Works for all envs?
+      for _ in range(10): # TODO, meta parameter?
+        self.agent.train(self.logger)
+        self.logger.add(episode_number, score, noise)
     else:
       self.logger.add_test(episode_number, score)
     
     return score
-
-  def _update_agent(self, score):
-    losses = []
-    max_qs = np.array([])
-
-    # TODO: range could be int(501.0 - score)?
-    # TODO: Works for env with scores different than cartpole
-    for _ in range(10): # TODO, meta parameter?
-      loss, max_q = self.agent.train()
-      losses.append(loss)
-      max_qs = np.append(max_qs, max_q)
-
-    return losses, max_qs
 
 
   def random_agent(self):
