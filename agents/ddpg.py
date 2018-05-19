@@ -230,7 +230,19 @@ class DDPG_agent():
 
 
   def load(self, path):
-    self.model.load_weights(path)
+    dir_name = "./saves/{}/".format(dir_name)
+
+    with open('{}parameters.txt'.format(dir_name), 'r') as file:
+      agent_params = json.load(file)
+
+    # TODO: Other parameters as well?
+    self.batch_size = agent_params['batch_size']
+    self.gamma = agent_params['gamma']
+    self.memory = deque(maxlen=agent_params['memory_size'])
+
+    saver = tf.train.Saver()
+    saver.restore(self.sess, "{}model.ckpt".format(dir_name))
+    print("Model succesfully loaded")
 
 
   def save(self, name, n_train_episodes, episode_length, env_type, score, run_id):
