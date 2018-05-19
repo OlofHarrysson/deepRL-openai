@@ -163,7 +163,8 @@ class Critic():
 
 
 class DDPG_agent():
-  def __init__(self, env_helper, gamma = 0.99):
+  def __init__(self, env_helper, actor_parameters = {}, critic_parameters = {},
+               gamma = 0.99):
     # TODO: Save, load model
     self.sess = tf.Session()
     self.global_step = tf.Variable(0, trainable=False)
@@ -174,8 +175,8 @@ class DDPG_agent():
 
     self.gamma = gamma
 
-    self.actor = Actor(self.sess, env_helper, self.batch_size)
-    self.critic = Critic(self.sess, env_helper)
+    self.actor = Actor(self.sess, env_helper, self.batch_size, **actor_parameters)
+    self.critic = Critic(self.sess, env_helper, **critic_parameters)
 
     self.sess.run(tf.global_variables_initializer())
 
@@ -225,8 +226,7 @@ class DDPG_agent():
 
 
   def create_noise_generator(self, nbr_episodes):
-    pass # TODO: Figure out what Ornstein parameters should depend on
-    return Ornstein_uhlenbeck_noise(mu = np.zeros(self.actor.action_dim))
+    return Ornstein_uhlenbeck_noise(mu = np.zeros(self.actor.action_dim)) # TODO: Other mean for envs with actions not centered around 0
 
 
   def load(self, path):
