@@ -46,7 +46,7 @@ def parse():
   return vars(args)
 
 
-def main(n_train_episodes = 500, n_test_episodes = 50, episode_length = 500,
+def main(n_train_episodes = 500, n_test_episodes = 50, max_episode_length = 500,
          render_freq = 99999, save = 'overwritable', load_path = None, record = False,
          agent_type = 'dqn', env_type = 'CartPole-v1', random_parameters = False):
 
@@ -67,7 +67,7 @@ def main(n_train_episodes = 500, n_test_episodes = 50, episode_length = 500,
     env = gym.wrappers.Monitor(env, './saves/last_run', force=True)
 
   # Train agent
-  trainer = Trainer(env, agent, n_train_episodes, episode_length, render_freq, logger)
+  trainer = Trainer(env, agent, n_train_episodes, max_episode_length, render_freq, logger)
 
   if load_path:
     agent.load(load_path) # Loads pre-trained agent with past parameters
@@ -75,7 +75,7 @@ def main(n_train_episodes = 500, n_test_episodes = 50, episode_length = 500,
   else:
     trainer.train(n_train_episodes)
     total_score = trainer.test(n_test_episodes)
-    agent.save(save, n_train_episodes, episode_length, env_type, total_score/n_test_episodes, run_id) # Save trained agent
+    agent.save(save, n_train_episodes, max_episode_length, env_type, total_score/n_test_episodes, run_id) # Save trained agent
 
   # Clean up
   if record:
