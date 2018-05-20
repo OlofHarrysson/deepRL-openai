@@ -74,7 +74,9 @@ class DQN_agent:
     self._train_target()
 
     g_step = tf.train.global_step(self.sess, self.global_step)
-    logger.add_agent_specifics(loss, max_q, g_step)
+    if g_step % 10 == 0:
+      # Files were getting to big
+      logger.add_agent_specifics(loss, max_q, g_step)
 
 
   def train_net(self, state, y):
@@ -128,7 +130,6 @@ class DQN_agent:
 
   def load(self, dir_name):
   # TODO: Make it nicer regarding that every parameter has a line to save/load.
-  # TODO: Move it away from DQN when DDPG.py is working again
     dir_name = "./saves/{}/".format(dir_name)
 
     with open('{}parameters.txt'.format(dir_name), 'r') as file:
@@ -145,12 +146,11 @@ class DQN_agent:
     print("Model succesfully loaded")
 
   def save(self, name, n_train_episodes, episode_length, env_type, score, run_id):
-    # TODO: Move it away from DQN when DDPG.py is working again
+    # TODO: Move parts of save / load to other class that can handle all agents
     if isinstance(name, str): 
       dir_name = "./saves/last_run/"
     else:
-      class_name = self.__class__.__name__
-      dir_name = "./saves/{}_{}/".format(run_id, class_name)
+      dir_name = "./saves/{}-{}/".format(run_id, str(self))
 
     pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
     with open('{}parameters.txt'.format(dir_name), 'w') as file:

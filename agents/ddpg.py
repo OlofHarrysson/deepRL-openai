@@ -202,7 +202,10 @@ class DDPG_agent():
 
     actor_g_step = tf.train.global_step(self.sess, self.actor.global_step)
     critic_g_step = tf.train.global_step(self.sess, self.critic.global_step)
-    logger.add_agent_specifics(critic_loss, critic_q_values, actor_gradients, actor_g_step, critic_g_step)
+
+    if actor_g_step % 10 == 0:
+      # Files were getting to big
+      logger.add_agent_specifics(critic_loss, critic_q_values, actor_gradients, actor_g_step, critic_g_step)
 
 
   def _replay_memory(self):
@@ -229,7 +232,7 @@ class DDPG_agent():
     return Ornstein_uhlenbeck_noise(mu = np.zeros(self.actor.action_dim)) # TODO: Other mean for envs with actions not centered around 0
 
 
-  def load(self, path):
+  def load(self, dir_name):
     dir_name = "./saves/{}/".format(dir_name)
 
     with open('{}parameters.txt'.format(dir_name), 'r') as file:
@@ -246,12 +249,11 @@ class DDPG_agent():
 
 
   def save(self, name, n_train_episodes, episode_length, env_type, score, run_id):
-    # TODO: Move it away from DQN when DDPG.py is working again
+    # TODO: Move parts of save / load to other class that can handle all agents
     if isinstance(name, str): 
       dir_name = "./saves/last_run/"
     else:
-      class_name = self.__class__.__name__
-      dir_name = "./saves/{}_{}/".format(run_id, class_name)
+      dir_name = "./saves/{}-{}/".format(run_id, str(self))
 
     pathlib.Path(dir_name).mkdir(parents=True, exist_ok=True)
     with open('{}parameters.txt'.format(dir_name), 'w') as file:
