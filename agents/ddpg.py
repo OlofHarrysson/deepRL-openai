@@ -227,7 +227,7 @@ class DDPG_agent():
 
 
   def create_noise_generator(self, nbr_episodes):
-    return Ornstein_uhlenbeck_noise(np.zeros(self.actor.action_dim), nbr_episodes, sigma=0.5, theta=0.9) # TODO: Other mean for envs with actions not centered around 0
+    return Ornstein_uhlenbeck_noise(np.zeros(self.actor.action_dim), nbr_episodes, sigma=2, theta=10) # TODO: Other mean for envs with actions not centered around 0
 
 
   def load(self, dir_name):

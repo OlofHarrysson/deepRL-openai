@@ -11,8 +11,8 @@ class Ornstein_uhlenbeck_noise:
 
     # Stolen from e-greedy
     self.multiplier = 1.
-    self.min_multiplier = 0.1
-    fraction = 0.8
+    self.min_multiplier = 0.05
+    fraction = 1
     self.decay_multi = self.min_multiplier ** (1 / (nbr_episodes * fraction))
 
   def __call__(self):
@@ -22,7 +22,8 @@ class Ornstein_uhlenbeck_noise:
     x = self.x_prev + self.theta * (self.mu - self.x_prev) * self.dt + \
           self.sigma * np.sqrt(self.dt) * np.random.normal(size=self.mu.shape)
     self.x_prev = x
-    return x * self.multiplier if self.multiplier > self.min_multiplier else x * self.min_multiplier
+    return x * self.multiplier
+    # return x * self.multiplier if self.multiplier > self.min_multiplier else x * self.min_multiplier
 
 
   def reset(self):
@@ -56,8 +57,8 @@ class Epsilon_greedy:
 
 if __name__ == "__main__":
   import matplotlib.pyplot as plt
-  n_epi = 2000
-  noise = Ornstein_uhlenbeck_noise(np.zeros(1), n_epi, sigma=0.5, theta=0.9)
+  n_epi = 5000
+  noise = Ornstein_uhlenbeck_noise(np.zeros(1), n_epi, sigma=2, theta=10)
 
   ys = []
   xs = []
