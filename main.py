@@ -56,6 +56,7 @@ def main(n_train_episodes = 500, n_test_episodes = 50, max_episode_length = 500,
   # env = gym.make('Pendulum-v0')
 
   env = gym.make(env_type) # TODO: Check the env_type input / give options
+  env._max_episode_steps = max_episode_length
   agent = agent_creator(agent_type, env, random_parameters)
 
   # ID is not unique but used to match runs with saves more easily
