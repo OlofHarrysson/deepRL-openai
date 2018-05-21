@@ -24,7 +24,6 @@ class Actor():
 
     self.batch_size = batch_size
     self.tau = tau
-    self.noise_gen = Ornstein_uhlenbeck_noise(mu = np.zeros(self.action_dim))
 
     self.input, self.output, self.weights = self._build_net('actor_net')
     self.target_input, self.target_output, self.target_weights = self._build_net('target_actor_net')
@@ -66,8 +65,8 @@ class Actor():
     return self.sess.run(self.target_output, {self.target_input: state})
 
 
-  def act(self, state):
-    action = self.predict(state) + self.noise_gen()
+  def act(self, state, noise):
+    action = self.predict(state) + noise
     return np.clip(action, -self.action_bound, self.action_bound)
 
 
@@ -185,8 +184,8 @@ class DDPG_agent():
     return self.state_dim
 
 
-  def act(self, state, training=False):
-    return self.actor.act(state) if training else self.actor.predict(state)
+  def act(self, state, noise):
+    return self.actor.act(state, noise)
 
 
   def add_memory(self, state, action, reward, next_state, done):
