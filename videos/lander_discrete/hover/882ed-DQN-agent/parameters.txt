@@ -1,0 +1,1 @@
+{"memory_size": 50000, "tau": 0.03138273698268963, "gamma": 0.9938575773825193, "batch_size": 64, "learning_rate": 0.008075568030489009, "learning_rate_decay": 1207.9155924396243}

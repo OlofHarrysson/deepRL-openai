@@ -1,0 +1,1 @@
+{"actor_tau": 0.009563481131189917, "critic_learning_rate": 0.0007954875574779211, "gamma": 0.9916509277471262, "batch_size": 64, "memory_size": 5000, "actor_learning_rate_decay": 40754.13952239771, "actor_learning_rate": 2.5464964619113467e-05, "critic_tau": 0.0009615510515422289, "critic_learning_rate_decay": 1916.6612053056413}

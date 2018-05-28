@@ -32,7 +32,7 @@ def parse():
                  help="Specifies which agent to use. Currently supports: ddpg, dqn")
 
   p.add_argument("-e", "--env_type", type=str,
-                 help="Specifies which environment to use. Currently supports: CartPole-v1, Pendulum-v0, LunarLanderContinuous-v2")
+                 help="Specifies which environment to use. Currently supports: CartPole-v1, Pendulum-v0, LunarLander-v2, LunarLanderContinuous-v2")
 
   p.add_argument("-d", "--record", action="store_true",
                  help="Records the agents actions")
@@ -50,10 +50,6 @@ def main(n_train_episodes = 500, n_test_episodes = 50, max_episode_length = 500,
          render_freq = 99999, save = 'overwritable', load_path = None, record = False,
          agent_type = 'dqn', env_type = 'CartPole-v1', random_parameters = False):
 
-  # env = gym.make('CartPole-v1')
-  # env = gym.make('LunarLander-v2')
-  # env = gym.make('LunarLanderContinuous-v2')
-  # env = gym.make('Pendulum-v0')
 
   env = gym.make(env_type) # TODO: Check the env_type input / give options
   env._max_episode_steps = max_episode_length

@@ -8,7 +8,7 @@ import json
 
 class DQN_agent:
   def __init__(self, env_helper, lr = 0.001, batch_size = 64,
-               gamma = 0.99, tau = 0.01, memory_size = 50000, lr_decay = 100):
+               gamma = 0.99, tau = 0.01, memory_size = 50000, lr_decay = 1000):
 
     self.sess = tf.Session()
 

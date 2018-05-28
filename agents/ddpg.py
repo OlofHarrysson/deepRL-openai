@@ -8,7 +8,7 @@ import json
 
 class Actor():
   def __init__(self, sess, env_helper, batch_size, lr = 0.0001, tau = 0.001,
-               lr_decay = 100):
+               lr_decay = 1000):
     self.sess = sess
     self.state_dim = env_helper.get_state_dim()
     self.action_dim = env_helper.get_action_dim()
@@ -81,7 +81,7 @@ class Actor():
 
 
 class Critic():
-  def __init__(self, sess, env_helper, lr = 0.001, tau = 0.001, lr_decay = 100):
+  def __init__(self, sess, env_helper, lr = 0.001, tau = 0.001, lr_decay = 1000):
     self.sess = sess
     self.state_dim = env_helper.get_state_dim()
     self.action_dim = env_helper.get_action_dim()
@@ -164,7 +164,6 @@ class Critic():
 class DDPG_agent():
   def __init__(self, env_helper, actor_parameters = {}, critic_parameters = {},
                gamma = 0.99):
-    # TODO: Save, load model
     self.sess = tf.Session()
     self.global_step = tf.Variable(0, trainable=False)
 

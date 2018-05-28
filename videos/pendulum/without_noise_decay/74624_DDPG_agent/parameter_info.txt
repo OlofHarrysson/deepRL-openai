@@ -1,0 +1,1 @@
+{"episode_length": 500, "n_train_episodes": 5000, "env_type": "Pendulum-v0", "score": -160.94256543935876}

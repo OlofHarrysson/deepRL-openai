@@ -1,0 +1,1 @@
+{"score": -17.05601686945097, "episode_length": 500, "env_type": "LunarLander-v2", "n_train_episodes": 5000}

@@ -39,7 +39,7 @@ def DQN_parameters():
   learning_rate = log_random(a, b)
 
   a = random.uniform(1,10)
-  b = random.randint(2, 5)
+  b = random.randint(2, 3)
   learning_rate_decay = log_random(a, b)
 
   a = random.uniform(1,10)
@@ -47,7 +47,7 @@ def DQN_parameters():
   gamma = 1 - log_random(a, b)
 
   a = random.uniform(1,10)
-  b = random.randint(-4, -1)
+  b = random.randint(-2, -1)
   tau = log_random(a, b)
 
   return learning_rate, learning_rate_decay, gamma, tau
